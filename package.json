@@ -1,0 +1,23 @@
+{
+  "name": "debr",
+  "version": "1.0.0",
+  "description": "version mgr",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "cli.coffee"
+  ],
+  "bin": {
+    "debr": "cli.coffee"
+  },
+  "preferGlobal": "true",
+  "author": "adam stokes",
+  "license": "MIT",
+  "homepage": "https://github.com/battlemidget/debr#readme",
+  "dependencies": {
+    "fs-extra-promise": "^0.1.3",
+    "log-symbols": "^1.0.2",
+    "meow": "^3.3.0"
+  }
+}
