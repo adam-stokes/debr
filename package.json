@@ -1,13 +1,10 @@
 {
   "name": "debr",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "version mgr",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "files": [
-    "cli.coffee"
-  ],
   "bin": {
     "debr": "cli.coffee"
   },
