@@ -14,6 +14,7 @@
   "homepage": "https://github.com/battlemidget/debr#readme",
   "dependencies": {
     "fs-extra-promise": "^0.1.3",
+    "ini": "^1.3.4",
     "log-symbols": "^1.0.2",
     "meow": "^3.3.0"
   }

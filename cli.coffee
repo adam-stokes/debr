@@ -36,7 +36,40 @@ checkForChangelog = ->
     .catch((e) ->
       return throw Error(e))
 
-checkForChangelog()
+gitConfig = ->
+  # check .gitconfig first
+  gitPath = process.env['HOME'] + '/.gitconfig'
+  fs.lstatAsync(gitPath)
+    .then((stat) ->
+      if stat.isFile()
+        git = ini.parse(fs.readFileSync(gitPath, 'utf-8'))
+        console.log git
+        return "#{git.user.name} #{git.user.email}")
+    .catch((e) -> throw Error(e))
+
+bzrConfig = ->
+  # check .bazaar/bazaar.conf next
+  bzrPath = process.env['HOME'] + '/.bazaar/bazaar.conf'
+  fs.lstatAsync(bzrPath)
+    .then((stat) ->
+      if stat.isFile()
+        bzr = ini.parse(fs.readFileSync(bzrPath, 'utf-8'))
+        console.log bzr
+        return bzr.DEFAULT.email)
+    .catch((e) -> throw Error(e))
+
+config = ->
+  gitConfig()
+    .then((username) -> return username)
+    .catch(->
+      try
+        return bzrConfig()
+      catch e
+        throw Error(e))
+
+config()
+  .then((user) ->
+    return checkForChangelog())
   .then((log) -> return parseLog(log))
   .then((version) ->
     return console.log(symbol.success,
