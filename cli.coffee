@@ -5,15 +5,13 @@ meow = require('meow')
 symbol = require('log-symbols')
 Version = require('.')
 
-cli = meow(
-  help: [
-    'Usage',
-    ' debr <changelog> [opts]',
-    '',
-    'Eg:',
-    ' $ debr debian/changelog',
-    ].join('\n')
-)
+cli = meow(help: [
+  'Usage',
+  ' debr <changelog> [opts]',
+  '',
+  'Eg:',
+  ' $ debr debian/changelog',
+])
 
 # Parses debian/changelog
 parseLog = (changeLog) ->
@@ -35,3 +33,4 @@ parseLog(changeLog)
     MINOR(#{version.versionMinor()}),
     PATCHLEVEL(#{version.versionPatch()}),
     SERIES(#{version.series()})"))
+  .catch((e) -> console.log(symbol.error, "Unable to parse changelog entry."))
