@@ -3,7 +3,9 @@
 fs = require('fs-extra-promise')
 meow = require('meow')
 symbol = require('log-symbols')
+path = require('path')
 Version = require('.')
+Promise = require('bluebird')
 
 cli = meow(help: [
   'Usage',
@@ -20,17 +22,29 @@ parseLog = (changeLog) ->
       lines = out.trim().split('\n')
       firstLine = lines[0]
       return new Version(firstLine))
+    .catch((e) -> throw Error(e))
 
-changeLog = cli.input[0]
-unless changeLog?
-  console.log(symbol.error, "Needs a debian/changelog file.")
-  process.exit 1
+checkForChangelog = ->
+  changelog = cli.input[0]
+  if changelog?
+    return Promise.resolve(changelog)
+  logPath = process.cwd() + '/debian/changelog'
+  return fs.lstatAsync(logPath)
+    .then((stat) ->
+      if stat.isFile()
+        return logPath)
+    .catch((e) ->
+      return throw Error(e))
 
-parseLog(changeLog)
-  .then((version) -> return console.log(symbol.success,
-    "#{version.packageName()},
-    MAJOR(#{version.versionMajor()}),
-    MINOR(#{version.versionMinor()}),
-    PATCHLEVEL(#{version.versionPatch()}),
-    SERIES(#{version.series()})"))
-  .catch((e) -> console.log(symbol.error, "Unable to parse changelog entry."))
+checkForChangelog()
+  .then((log) -> return parseLog(log))
+  .then((version) ->
+    return console.log(symbol.success,
+      "#{version.packageName()},
+      MAJOR(#{version.versionMajor()}),
+      MINOR(#{version.versionMinor()}),
+      PATCHLEVEL(#{version.versionPatch()}),
+      SERIES(#{version.series()})"))
+  .catch((e) ->
+    console.log e
+    return process.exit 1)
