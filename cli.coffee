@@ -1,4 +1,4 @@
-# debr
+#!/usr/bin/env coffee
 
 fs = require('fs-extra-promise')
 meow = require('meow')
