@@ -1,42 +1,33 @@
 #!/usr/bin/env coffee
-Promise = require('bluebird')
-_ = require('lodash')
-fs = require('fs-extra-promise')
 meow = require('meow')
-DebChangelog = require('deb-changelog')
 
 cli = meow(help: [
   'Usage',
-  ' debr <changelog> [opts]',
+  ' debr cmd [opts]',
+  '',
+  ' tag        Git tag a new version (does not perform release)',
+  ' release    Tags, Changes, Builds, and Commit pkg to git.',
+  ' changelog  Generates a debian/changelog',
+  '',
+  'General Options',
+  ' -d --debug  Enable debugging'
   '',
   'Eg:',
-  ' $ debr debian/changelog',
+  ' $ debr release',
+  ' $ debr changelog'
 ])
 
-# Parses debian/changelog
-parseLog = (changeLog) ->
-  fs.readFileAsync(changeLog, 'utf-8')
-    .then((out) ->
-      return new DebChangelog(out))
-    .catch((e) -> throw Error(e))
+action = cli.input[0]
+debug = cli.flags.d || cli.flags.debug
 
-checkForChangelog = ->
-  changelog = cli.input[0]
-  if changelog?
-    return Promise.resolve(changelog)
-  logPath = process.cwd() + '/debian/changelog'
-  return fs.lstatAsync(logPath)
-    .then((stat) ->
-      if stat.isFile()
-        return logPath)
-    .catch((e) ->
-      return throw Error(e))
+if debug?
+  console.log cli
 
-checkForChangelog()
-  .then((clPath) ->
-    return parseLog(clPath))
-  .then((cl) ->
-    parsed = _.first(cl.parse())
-    return console.log "#{parsed.pkgname} -> #{parsed.debVersion}")
-  .catch((e) ->
-    return throw Error(e))
+if not action?
+  console.error "Needs a subcommand, eg (release|changelog)"
+  process.exit 1
+
+switch action
+  when "release" then console.log "performing a release"
+  when "changelog" then console.log "printing changelog"
+  else console.log "HAPPY!"
