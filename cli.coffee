@@ -1,11 +1,9 @@
 #!/usr/bin/env coffee
-
+Promise = require('bluebird')
+_ = require('lodash')
 fs = require('fs-extra-promise')
 meow = require('meow')
-symbol = require('log-symbols')
-path = require('path')
-Version = require('.')
-Promise = require('bluebird')
+DebChangelog = require('deb-changelog')
 
 cli = meow(help: [
   'Usage',
@@ -19,9 +17,7 @@ cli = meow(help: [
 parseLog = (changeLog) ->
   fs.readFileAsync(changeLog, 'utf-8')
     .then((out) ->
-      lines = out.trim().split('\n')
-      firstLine = lines[0]
-      return new Version(firstLine))
+      return new DebChangelog(out))
     .catch((e) -> throw Error(e))
 
 checkForChangelog = ->
@@ -36,48 +32,11 @@ checkForChangelog = ->
     .catch((e) ->
       return throw Error(e))
 
-gitConfig = ->
-  # check .gitconfig first
-  gitPath = process.env['HOME'] + '/.gitconfig'
-  fs.lstatAsync(gitPath)
-    .then((stat) ->
-      if stat.isFile()
-        git = ini.parse(fs.readFileSync(gitPath, 'utf-8'))
-        console.log git
-        return "#{git.user.name} #{git.user.email}")
-    .catch((e) -> throw Error(e))
-
-bzrConfig = ->
-  # check .bazaar/bazaar.conf next
-  bzrPath = process.env['HOME'] + '/.bazaar/bazaar.conf'
-  fs.lstatAsync(bzrPath)
-    .then((stat) ->
-      if stat.isFile()
-        bzr = ini.parse(fs.readFileSync(bzrPath, 'utf-8'))
-        console.log bzr
-        return bzr.DEFAULT.email)
-    .catch((e) -> throw Error(e))
-
-config = ->
-  gitConfig()
-    .then((username) -> return username)
-    .catch(->
-      try
-        return bzrConfig()
-      catch e
-        throw Error(e))
-
-config()
-  .then((user) ->
-    return checkForChangelog())
-  .then((log) -> return parseLog(log))
-  .then((version) ->
-    return console.log(symbol.success,
-      "#{version.packageName()},
-      MAJOR(#{version.versionMajor()}),
-      MINOR(#{version.versionMinor()}),
-      PATCHLEVEL(#{version.versionPatch()}),
-      SERIES(#{version.series()})"))
+checkForChangelog()
+  .then((clPath) ->
+    return parseLog(clPath))
+  .then((cl) ->
+    parsed = _.first(cl.parse())
+    return console.log "#{parsed.pkgname} -> #{parsed.debVersion}")
   .catch((e) ->
-    console.log e
-    return process.exit 1)
+    return throw Error(e))
