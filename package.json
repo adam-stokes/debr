@@ -13,12 +13,11 @@
   "license": "MIT",
   "homepage": "https://github.com/battlemidget/debr#readme",
   "dependencies": {
+    "chalk": "^1.1.0",
+    "commander": "^2.8.1",
     "deb-changelog": "battlemidget/deb-changelog",
     "fs-extra-promise": "^0.1.3",
-    "git-config": "0.0.7",
-    "ini": "^1.3.4",
     "lodash": "^3.10.0",
-    "log-symbols": "^1.0.2",
-    "meow": "^3.3.0"
+    "prettyjson": "^1.1.2"
   }
 }

@@ -1,14 +1,17 @@
 {
     "package": "",
-    "releases": [
-        {
-            "version" : "",
-            "series": "",
-            "urgency": "",
-            "body": [
-                "Comments here"
-            ],
-            "timestamp": ""
-        }
-    ]
+    "series": {
+        "trusty": [
+            {
+                "version" : "0.0.1",
+                "versionExtra": "0ubuntu1~14.04.1",
+                "urgency": "medium",
+                "body": [
+                    "Initial packaging",
+                    "New features."
+                ],
+                "timestamp": ""
+            }
+        ]
+    }
 }

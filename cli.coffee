@@ -1,33 +1,60 @@
 #!/usr/bin/env coffee
-meow = require('meow')
+program = require('commander')
+fs = require('fs-extra-promise')
+prettyjson = require('prettyjson')
+pkgInfo = require('./package.json')
 
-cli = meow(help: [
-  'Usage',
-  ' debr cmd [opts]',
-  '',
-  ' tag        Git tag a new version (does not perform release)',
-  ' release    Tags, Changes, Builds, and Commit pkg to git.',
-  ' changelog  Generates a debian/changelog',
-  '',
-  'General Options',
-  ' -d --debug  Enable debugging'
-  '',
-  'Eg:',
-  ' $ debr release',
-  ' $ debr changelog'
-])
-
-action = cli.input[0]
-debug = cli.flags.d || cli.flags.debug
-
-if debug?
-  console.log cli
-
-if not action?
-  console.error "Needs a subcommand, eg (release|changelog)"
+debrInfo = process.cwd() + '/debr.json'
+try
+  debrInfo = require(debrInfo)
+catch e
+  console.error "Unable to load ./debr.json: #{e}"
   process.exit 1
 
-switch action
-  when "release" then console.log "performing a release"
-  when "changelog" then console.log "printing changelog"
-  else console.log "HAPPY!"
+program
+  .version("debr v#{pkgInfo.version}")
+
+program
+  .command('config')
+  .description('Displays current package configuration')
+  .action ->
+    console.log(prettyjson.render(debrInfo, {
+      keysColor: 'grey'
+      dashColor: 'red'
+    }))
+program
+  .command('tag [version]')
+  .description('Git tag a new version (does not perform release)')
+  .action (version) ->
+    if not version?
+      console.log 'No version specified, reading from debr.json'
+    console.log 'tagging'
+program
+  .command('build')
+  .description('Build a debian package from current version')
+  .action ->
+    console.log 'building'
+program
+  .command('changelog')
+  .description('Generate a changelog from package')
+  .action ->
+    console.log 'generating changelog'
+program
+  .command('new-release')
+  .description('Tags, Changes, Builds, and Commit pkg to git.')
+  .action ->
+    console.log 'new release'
+program
+  .command('available-series')
+  .description('List current registered series')
+  .action ->
+    console.log "Currently registered series:"
+    for k,v of debrInfo.series
+      console.log "- #{k}"
+program
+  .command('new-series <series>')
+  .description('Register a new series')
+  .action (series) ->
+    console.log "Registering series: #{series}"
+
+program.parse process.argv
