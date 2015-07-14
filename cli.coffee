@@ -4,8 +4,11 @@ fs = require('fs-extra-promise')
 prettyjson = require('prettyjson')
 _ = require('lodash')
 pkgInfo = require('./package.json')
+ChangeLog = require('.')
 
 debrInfoPath = process.cwd() + '/debr.json'
+debChangeLogPath = process.cwd() + '/debian/changelog'
+
 try
   debrInfo = require(debrInfoPath)
 catch e
@@ -22,9 +25,20 @@ program
     console.log 'building'
 program
   .command('changelog')
-  .description('Generate a changelog from package')
+  .description('Parse existing debian/changelog')
   .action ->
-    console.log 'generating changelog'
+    try
+      ChangeLog.check(debChangeLogPath)
+    catch e
+      console.error "Could not find debian/changelog: #{e}"
+    ChangeLog.parse(debChangeLogPath)
+      .then((cl) ->
+        for entry in cl.splitLogs()
+          console.log(cl.parse(entry))
+        return)
+      .catch((e) ->
+        console.error e
+        return process.exit 1)
 program
   .command('config')
   .description('Displays current package configuration')

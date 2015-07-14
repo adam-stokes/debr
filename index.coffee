@@ -4,21 +4,17 @@ fs = require('fs-extra-promise')
 DebChangelog = require('deb-changelog')
 
 # Parses debian/changelog
-parseLog = (changeLog) ->
+module.exports.parse = (changeLog) ->
   fs.readFileAsync(changeLog, 'utf-8')
     .then((out) ->
       return new DebChangelog(out))
     .catch((e) -> throw Error(e))
 
-checkForChangelog = ->
-  changelog = cli.input[0]
-  if changelog?
-    return Promise.resolve(changelog)
-  logPath = process.cwd() + '/debian/changelog'
-  return fs.lstatAsync(logPath)
+module.exports.check = (changelog) ->
+  return fs.lstatAsync(changelog)
     .then((stat) ->
       if stat.isFile()
-        return logPath)
+        return true)
     .catch((e) ->
       return throw Error(e))
 
