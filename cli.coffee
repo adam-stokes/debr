@@ -12,7 +12,7 @@ Shell = require('shelljs')
 
 Shell.config.silent = true
 
-debrInfoPath = process.cwd() + '/debr.json'
+debrInfoPath = process.cwd() + '/.debr.json'
 debChangeLogPath = process.cwd() + '/debian/changelog'
 
 try
