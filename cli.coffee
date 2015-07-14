@@ -1,23 +1,25 @@
 #!/usr/bin/env coffee
+Promise = require('bluebird')
 program = require('commander')
 fs = require('fs-extra-promise')
+isFile = Promise.promisify(require('is-file'))
 prettyjson = require('prettyjson')
 _ = require('lodash')
 pkgInfo = require('./package.json')
 ChangeLog = require('.')
+require('shelljs/global')
 
 debrInfoPath = process.cwd() + '/debr.json'
 debChangeLogPath = process.cwd() + '/debian/changelog'
 
-try
-  debrInfo = require(debrInfoPath)
-catch e
-  console.error "Unable to load ./debr.json, " +
-    "only debian/changelog parsing is available."
-
 program
   .version("debr v#{pkgInfo.version}")
 
+program
+  .command('init')
+  .description('Initialize a debr project')
+  .action ->
+    console.log 'initializing'
 program
   .command('build')
   .description('Build a debian package from current version')
@@ -27,21 +29,17 @@ program
   .command('changelog')
   .description('Parse existing debian/changelog')
   .action ->
-    try
-      ChangeLog.check(debChangeLogPath)
-    catch e
-      console.error "Could not find debian/changelog: #{e}"
     ChangeLog.parse(debChangeLogPath)
       .then((cl) ->
         for entry in cl.splitLogs()
-          console.log(cl.parse(entry))
+          console.log(prettyjson.render(cl.parse(entry)))
         return)
       .catch((e) ->
         console.error e
         return process.exit 1)
 program
   .command('config')
-  .description('Displays current package configuration')
+  .description('Displays current debr configuration')
   .action ->
     console.log(prettyjson.render(debrInfo, {
       keysColor: 'grey'
@@ -103,4 +101,19 @@ program
       console.log 'No version specified, reading from debr.json'
     console.log 'tagging'
 
-program.parse process.argv
+isFile(debChangeLogPath)
+  .then(->
+    unless which('git')
+      console.error "Needs git installed."
+      process.exit 1
+    try
+      debrInfo = require(debrInfoPath)
+    catch e
+      curr_cmd = process.argv
+      unless "init" in curr_cmd
+        console.error "Unable to load ./debr.json, " +
+        "please run `debr init`"
+        process.exit 1
+    return program.parse(process.argv))
+  .catch((e) ->
+    console.error "Failed to process a required config: #{e}")
