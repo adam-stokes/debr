@@ -75,9 +75,12 @@ program
         Utils.cloneRepo(Utils.repo(), options.output)
         if options.source?
           console.log "Building source package in #{options.output}"
-        Build.debSource(debrInfo, cl.latest, options.output))
+          Build.debSource(debrInfo, cl.latest, options.output)
+        else if options.binary?
+          console.log "Building binary package in #{options.output}"
+          Build.debRelease(debrInfo, cl.latest, options.output))
       .catch((e) ->
-        return console.log "Problem with build.")
+        return console.log "Problem with build: #{e}")
 
 # Parse changelog
 # debr changelog [-l]
