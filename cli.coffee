@@ -12,8 +12,8 @@ debChangeLogPath = process.cwd() + '/debian/changelog'
 try
   debrInfo = require(debrInfoPath)
 catch e
-  console.error "Unable to load ./debr.json: #{e}"
-  process.exit 1
+  console.error "Unable to load ./debr.json, " +
+    "only debian/changelog parsing is available."
 
 program
   .version("debr v#{pkgInfo.version}")
