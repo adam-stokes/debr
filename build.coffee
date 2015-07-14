@@ -2,32 +2,34 @@ Utils = require('./utils')
 Shell = require('shelljs')
 
 # Builds a debian source package which includes the orig.tar.*
-module.exports.debSource = (debr, dst) ->
-  console.log "Building a source deb (orig.tar.* included)"
-  tarball(debr, dst)
-  cd(dst)
+module.exports.debSource = (debr, changelog, dst) ->
+  clean(dst)
+  tarball(debr, changelog, dst)
+  Shell.cd(dst)
   excludes = debr.excludes.join("|")
   buildargs = "-us -uc"
   if excludes?
     buildargs = "#{buildargs} -i'#{excludes}'"
-  exec("dpkg-buildpackage -S -sa #{buildargs}")
+  Shell.exec("dpkg-buildpackage -S -sa #{buildargs}")
 
 module.exports.debRelease = (debr, dst) ->
   console.log "Building a release deb (no orig.tar.* included)"
-  cd(dst)
+  Shell.cd(dst)
   excludes = debr.excludes.join("|")
   buildargs = "-us -uc"
   if excludes?
     buildargs = "#{buildargs} -i'#{excludes}'"
-  exec("dpkg-buildpackage -S -sd #{buildargs}")
+  Shell.exec("dpkg-buildpackage -S -sd #{buildargs}")
 
-module.exports.tarball = (debr, dst) ->
-  cd(dst)
-  cd('..')
-  exec("tar czf #{debr.debVersion}.orig.tar.gz #{dst} " +
-       "--exclude-vcs --exclude=debian")
-  cd(dst)
+tarball = (debr, changelog, dst) ->
+  Shell.cd(dst)
+  Shell.cd('..')
+  cmd = "tar czf #{changelog.pkgname}_#{changelog.debVersion}.orig.tar.gz " +
+        "#{dst} --exclude-vcs --exclude=debian"
+  console.log cmd
+  Shell.exec(cmd)
+  Shell.cd(dst)
 
-module.exports.clean = (dst) ->
-  cd(dst)
-  exec('debian/rules clean')
+clean = (dst) ->
+  Shell.cd(dst)
+  Shell.exec('debian/rules clean')

@@ -63,17 +63,21 @@ program
 program
   .command('build')
   .description('Build a debian package from current version')
-  .option('-s', '--source', 'Builds a source only package')
-  .option('-b', '--binary', 'Builds a binary only package')
-  .option('-o', '--output', 'Destination directory to put build.')
+  .option('-s, --source', 'Builds a source only package')
+  .option('-b, --binary', 'Builds a binary only package')
+  .option('-o, --output [dir]', 'Destination directory to put build.', '/tmp')
   .action (options) ->
     unless options.output?
       console.error "Needs a -o <dir> output directory."
-      exit 1
-    Utils.cloneRepo(Utils.repo(), options.output)
-    if options.source?
-      console.log 'Building source package'
-      Build.debSource(debrInfo, options.output)
+      process.exit 1
+    ChangeLog.load(debChangeLogPath)
+      .then((cl) ->
+        Utils.cloneRepo(Utils.repo(), options.output)
+        if options.source?
+          console.log "Building source package in #{options.output}"
+        Build.debSource(debrInfo, cl.latest, options.output))
+      .catch((e) ->
+        return console.log "Problem with build.")
 
 # Parse changelog
 # debr changelog [-l]
