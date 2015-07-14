@@ -3,12 +3,14 @@ Promise = require('bluebird')
 program = require('commander')
 fs = require('fs-extra-promise')
 isFile = Promise.promisify(require('is-file'))
+semver = require('semver')
 _ = require('lodash')
 pkgInfo = require('./package.json')
 ChangeLog = require('./changelog')
-Utils = require('./utils')
+Utils = Promise.promisifyAll(require('./utils'))
 Build = require('./build')
 Shell = require('shelljs')
+Moment = require('moment')
 
 Shell.config.silent = true
 
@@ -41,16 +43,17 @@ program
       model =
         author: "Your Name <your.name@example.com>"
         series:
-          wily: "15.10"
-          vivid: "15.04"
-          utopic: "14.10"
-          trusty: "14.04"
+          wily: "15.10.1"
+          vivid: "15.04.1"
+          utopic: "14.10.1"
+          trusty: "14.04.1"
+        tag: "bleed1"
         ppas: [
           'ppa:<project>/<branch>'
         ]
         excludes: [
           ".git.*",
-          ".tox",
+          ".tox.*",
           ".bzr.*",
           ".editorconfig",
           ".travis-yaml"
@@ -65,6 +68,7 @@ program
   .description('Build a debian package from current version')
   .option('-s, --source', 'Builds a source only package')
   .option('-b, --binary', 'Builds a binary only package')
+  .option('-i, --increment', 'Increment package version during build')
   .option('-o, --output [dir]', 'Destination directory to put build.', '/tmp')
   .action (options) ->
     unless options.output?
@@ -73,12 +77,25 @@ program
     ChangeLog.load(debChangeLogPath)
       .then((cl) ->
         Utils.cloneRepo(Utils.repo(), options.output)
-        if options.source?
-          console.log "Building source package in #{options.output}"
-          Build.debSource(debrInfo, cl.latest, options.output)
-        else if options.binary?
-          console.log "Building binary package in #{options.output}"
-          Build.debRelease(debrInfo, cl.latest, options.output))
+        return cl)
+      .then((cl) ->
+        if options.increment?
+          cl.latest.version = semver.inc(cl.latest.version, 'prepatch')
+
+        for series in _.keys(debrInfo.series)
+          seriesVersion = debrInfo.series[series]
+          cl.latest.series = series
+          cl.latest.versionExtra = "ubuntu1~#{seriesVersion}~#{debrInfo.tag}"
+          cl.latest.timestamp = Moment().format 'ddd, DD MMM YYYY HH:mm:ss ZZ'
+          builder = new Build(debrInfo, cl.latest, options)
+          builder.writeChangelog()
+          Shell.cd(options.output)
+          Shell.cd('..')
+          if !isFile.sync(builder.tar_file)
+            builder.debSource()
+          else
+            builder.debRelease()
+        return)
       .catch((e) ->
         return console.log "Problem with build: #{e}")
 
@@ -202,7 +219,9 @@ program
   .command('vcs-repo')
   .description('Displays upstream Git repository. (only supports Git)')
   .action ->
-    console.log Utils.repo()
+    Utils.repo()
+      .then((out) -> return console.log out)
+      .catch((e) -> return throw Error(e))
 
 isFile(debChangeLogPath)
   .then(->
