@@ -7,10 +7,20 @@ prettyjson = require('prettyjson')
 _ = require('lodash')
 pkgInfo = require('./package.json')
 ChangeLog = require('.')
+Utils = require('./utils')
 require('shelljs/global')
 
 debrInfoPath = process.cwd() + '/debr.json'
 debChangeLogPath = process.cwd() + '/debian/changelog'
+
+try
+  debrInfo = require(debrInfoPath)
+catch e
+  curr_cmd = process.argv
+  unless "init" in curr_cmd
+    console.error "Unable to load ./debr.json, " +
+    "please run `debr init`"
+    process.exit 1
 
 program
   .version("debr v#{pkgInfo.version}")
@@ -19,7 +29,23 @@ program
   .command('init')
   .description('Initialize a debr project')
   .action ->
-    console.log 'initializing'
+    isFile(debrInfoPath)
+    .then(->
+      console.log "debr.json exists! not overwriting."
+      return)
+    .catch(->
+      model =
+        author: "Your Name <your.name@example.com>"
+        series:
+          wily: "15.10"
+          vivid: "15.04"
+          utopic: "14.10"
+          trusty: "14.04"
+        ppas: [
+          'ppa:<project>/<branch>'
+        ]
+      console.log "Wrote debr.json config, please edit to suite your project."
+      return Utils.writeConf(debrInfoPath, model))
 program
   .command('build')
   .description('Build a debian package from current version')
@@ -27,12 +53,17 @@ program
     console.log 'building'
 program
   .command('changelog')
-  .description('Parse existing debian/changelog')
-  .action ->
+  .description('Parse and display debian/changelog')
+  .option('-l, --latest', 'Display latest entry')
+  .action (options) ->
     ChangeLog.parse(debChangeLogPath)
       .then((cl) ->
-        for entry in cl.splitLogs()
-          console.log(prettyjson.render(cl.parse(entry)))
+        entries = cl.splitLogs()
+        if options.latest
+          console.log(prettyjson.render(cl.parse(_.first(entries))))
+        else
+          for entry in entries
+            console.log(prettyjson.render(cl.parse(entry)))
         return)
       .catch((e) ->
         console.error e
@@ -82,15 +113,23 @@ program
   .action ->
     console.log 'new release'
 program
-  .command('new-series <series> <version>')
+  .command('add-series <series> <version>')
   .description('Register a new series')
   .action (series, version) ->
-    console.log "Registering series: #{series} (#{version})"
     debrInfo['series'][series] = version
-    console.log debrInfo['series']
     fs.writeJSONAsync(debrInfoPath, debrInfo, {spaces: 2})
       .then(->
-        console.log "Saved debr.json"
+        console.log "Registered series: #{series}"
+        return)
+      .catch((e) -> console.error "Problem saving config: #{e}")
+program
+  .command('add-ppa <ppa:location/branch>')
+  .description('Register a new ppa location')
+  .action (location) ->
+    debrInfo['ppas'].push location
+    fs.writeJSONAsync(debrInfoPath, debrInfo, {spaces: 2})
+      .then(->
+        console.log "Added ppa: #{location}"
         return)
       .catch((e) -> console.error "Problem saving config: #{e}")
 program
@@ -106,14 +145,6 @@ isFile(debChangeLogPath)
     unless which('git')
       console.error "Needs git installed."
       process.exit 1
-    try
-      debrInfo = require(debrInfoPath)
-    catch e
-      curr_cmd = process.argv
-      unless "init" in curr_cmd
-        console.error "Unable to load ./debr.json, " +
-        "please run `debr init`"
-        process.exit 1
     return program.parse(process.argv))
   .catch((e) ->
     console.error "Failed to process a required config: #{e}")
