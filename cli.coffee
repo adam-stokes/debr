@@ -137,7 +137,7 @@ program
   .description('Git tag a new version (does not perform release)')
   .action (version) ->
     if not version?
-      console.log 'No version specified, reading from debr.json'
+      console.log Utils.gitTags()
     console.log 'tagging'
 
 isFile(debChangeLogPath)
