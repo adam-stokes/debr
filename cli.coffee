@@ -157,8 +157,8 @@ program
   .command('config-get "<key>"')
   .description('Gets config option, ie config-get "series.wily"')
   .action (confKey) ->
-    fs.readJsonSync(debrInfoPath)
-    return console.log _.get(debrParse, confKey) ? "Key: #{confKey} not found."
+    debrInfo = fs.readJsonSync(debrInfoPath)
+    return console.log _.get(debrInfo, confKey) ? "Key: #{confKey} not found."
 
 # List current supported series
 # debr series
