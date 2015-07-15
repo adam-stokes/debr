@@ -1,6 +1,7 @@
 Promise = require('bluebird')
 shell = require('shelljs')
 fs = require('fs-extra-promise')
+isFile = require('is-file')
 prettyjson = require('prettyjson')
 
 shell.config.silent = true
@@ -8,7 +9,7 @@ shell.config.silent = true
 class Utils
   constructor: ->
   writeConf: (path, model) ->
-    return fs.writeJSONAsync(path, model, {spaces: 2})
+    return fs.outputJsonSync(path, model, {spaces: 2})
 
   gitTags: ->
     out = shell.exec('git tag').output.trim()
@@ -21,6 +22,11 @@ class Utils
   cloneRepo: (url, dst) ->
     console.log "Cloning: #{url}"
     shell.exec("git clone #{url} #{dst}")
+    shell.cd(dst)
+    if isFile("#{dst}/.gitmodules")
+      console.log "Cloning: Found submodules, updating."
+      shell.exec("git submodule init")
+      shell.exec("git submodule update")
 
   pj: (model) ->
     console.log(prettyjson.render(model, {

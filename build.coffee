@@ -38,7 +38,7 @@ class Build
 
       * Autopackaged by debr.
 
-     -- #{@entry.firstname} #{@entry.lastname} #{@entry.email} #{@entry.timestamp}
+     -- #{@entry.firstname} #{@entry.lastname} #{@entry.email}  #{@entry.timestamp}
     """
     Fs.outputFileSync("#{@options.output}/debian/changelog", changelogOut)
 
@@ -53,6 +53,8 @@ class Build
     console.log "Building: #{cmd}"
     Shell.exec(cmd)
     @debSign()
+    if @options.upload?
+      @dput()
 
   debRelease: ->
     Shell.cd(@options.output)
@@ -64,8 +66,11 @@ class Build
     console.log "Building: #{cmd}"
     Shell.exec(cmd)
     @debSign()
+    if @options.upload?
+      @dput()
 
   dput: ->
-    Shell.exec("dput #{@debrInfo.ppas[0]} ../#{@changes_file}")
+    Shell.cd(@options.output)
+    Shell.exec("dput #{@debrInfo.ppa} ../#{@changes_file}")
 
 module.exports = Build

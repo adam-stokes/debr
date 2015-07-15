@@ -42,15 +42,14 @@ program
     .catch(->
       model =
         author: "Your Name <your.name@example.com>"
+        latest_version: null,
         series:
           wily: "15.10.1"
           vivid: "15.04.1"
           utopic: "14.10.1"
           trusty: "14.04.1"
         tag: "bleed1"
-        ppas: [
-          'ppa:<project>/<branch>'
-        ]
+        ppa: null,
         excludes: [
           ".git.*",
           ".tox.*",
@@ -70,9 +69,13 @@ program
   .option('-b, --binary', 'Builds a binary only package')
   .option('-i, --increment', 'Increment package version during build')
   .option('-o, --output [dir]', 'Destination directory to put build.', '/tmp')
+  .option('-u, --upload', 'Upload to PPA')
   .action (options) ->
     unless options.output?
       console.error "Needs a -o <dir> output directory."
+      process.exit 1
+    if options.upload? and !debrInfo.ppa?
+      console.error "Specified upload, but no ppa set."
       process.exit 1
     ChangeLog.load(debChangeLogPath)
       .then((cl) ->
@@ -80,7 +83,14 @@ program
         return cl)
       .then((cl) ->
         if options.increment?
-          cl.latest.version = semver.inc(cl.latest.version, 'prepatch')
+          if not debrInfo.latest_version?
+            debrInfo.latest_version = semver.inc(cl.latest.version,
+              'prepatch')
+          else
+            debrInfo.latest_version = semver.inc(debrInfo.latest_version,
+              'prepatch')
+        cl.latest.version = debrInfo.latest_version
+        Utils.writeConf(debrInfoPath, debrInfo)
 
         for series in _.keys(debrInfo.series)
           seriesVersion = debrInfo.series[series]
@@ -92,6 +102,7 @@ program
           Shell.cd(options.output)
           Shell.cd('..')
           if !isFile.sync(builder.tar_file)
+            builder.clean()
             builder.debSource()
           else
             builder.debRelease()
@@ -137,23 +148,17 @@ program
       console.error "Invalid key=val format."
       process.exit 1
     _.set(debrInfo, confKey, confVal)
-    fs.writeJSONAsync(debrInfoPath, debrInfo, {spaces: 2})
-      .then(->
-        console.log "Saved '#{confKey}=#{confVal}' to config"
-        return)
-      .catch((e) -> console.error "Problem saving config: #{e}")
+    Utils.writeConf(debrInfoPath, debrInfo)
+    return console.log "Saved '#{confKey}=#{confVal}' to config"
 
 # Get config item from debr
 # debr config-get author
 program
   .command('config-get "<key>"')
-  .description('Gets config option, ie config-get "releases[0].tag"')
+  .description('Gets config option, ie config-get "series.wily"')
   .action (confKey) ->
-    fs.readJSONAsync(debrInfoPath)
-      .then((debrParse)->
-        console.log _.get(debrParse, confKey) ? "Key: #{confKey} not found."
-        return)
-      .catch((e) -> console.error "Problem reading config: #{e}")
+    fs.readJsonSync(debrInfoPath)
+    return console.log _.get(debrParse, confKey) ? "Key: #{confKey} not found."
 
 # List current supported series
 # debr series
@@ -166,14 +171,6 @@ program
     _.each(keys, (k) ->
       console.log _.padLeft("#{k} (#{debrInfo.series[k]})", 20))
 
-# Build a new release
-# debr release
-program
-  .command('new-release')
-  .description('Tags, Changes, Builds, and Commit pkg to git.')
-  .action ->
-    console.log 'new release'
-
 # Add supported series
 # debr add-series wily 15.10
 program
@@ -181,11 +178,8 @@ program
   .description('Register a new series')
   .action (series, version) ->
     debrInfo['series'][series] = version
-    fs.writeJSONAsync(debrInfoPath, debrInfo, {spaces: 2})
-      .then(->
-        console.log "Registered series: #{series}"
-        return)
-      .catch((e) -> console.error "Problem saving config: #{e}")
+    Utils.writeConf(debrInfoPath, debrInfo)
+    return console.log "Registered series: #{series}"
 
 # Add ppa
 # debr add-ppa ppa:juju/stable
@@ -193,12 +187,9 @@ program
   .command('add-ppa <ppa:location/branch>')
   .description('Register a new ppa location')
   .action (location) ->
-    debrInfo['ppas'].push location
-    fs.writeJSONAsync(debrInfoPath, debrInfo, {spaces: 2})
-      .then(->
-        console.log "Added ppa: #{location}"
-        return)
-      .catch((e) -> console.error "Problem saving config: #{e}")
+    debrInfo['ppa'] = location
+    Utils.writeConf(debrInfoPath, debrInfo)
+    return console.log "Added ppa: #{location}"
 
 # List git tags
 # debr tag
